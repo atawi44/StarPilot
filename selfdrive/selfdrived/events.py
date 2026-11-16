@@ -1220,17 +1220,11 @@ STARPILOT_EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
   },
 
   StarPilotEventName.openpilotCrashed: {
-    ET.IMMEDIATE_DISABLE: Alert(
-      "openpilot crashed",
-      "Please post the 'Error Log' in the StarPilot Discord!",
-      AlertStatus.critical, AlertSize.mid,
-      Priority.HIGHEST, VisualAlert.none, AudibleAlert.prompt, .1),
-
-    ET.NO_ENTRY: Alert(
-      "openpilot crashed",
-      "Please post the 'Error Log' in the StarPilot Discord!",
-      AlertStatus.critical, AlertSize.mid,
-      Priority.HIGHEST, VisualAlert.none, AudibleAlert.prompt, .1),
+    ET.WARNING: Alert(
+      "openpilot error logged",
+      "Please check 'Error Log' in settings",
+      AlertStatus.userPrompt, AlertSize.mid,
+      Priority.LOW, VisualAlert.none, AudibleAlert.prompt, 3.),
   },
 
   StarPilotEventName.speedLimitChanged: {

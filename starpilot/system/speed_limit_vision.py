@@ -1047,6 +1047,10 @@ class SpeedLimitVisionDaemon:
         self.net = cv2.dnn.readNetFromONNX(str(US_DETECTOR_MODEL_PATH))
         self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+        # Verify OpenCV DNN can execute forward pass on this model
+        dummy = cv2.dnn.blobFromImage(np.zeros((self.detector_input_size, self.detector_input_size, 3), dtype=np.uint8), 1/255.0, (self.detector_input_size, self.detector_input_size))
+        self.net.setInput(dummy)
+        self.net.forward()
         self.classifier_input_size = self._read_onnx_square_input_size(
           US_CLASSIFIER_MODEL_PATH,
           DEFAULT_CLASSIFIER_INPUT_SIZE,
@@ -2799,13 +2803,17 @@ class SpeedLimitVisionDaemon:
 
       self.current_frame_bgr = frame_bgr
 
-      if detector_due:
-        self.detector_inference_count += 1
-        self.last_inference_at = now
-        detection = self._detect_sign(frame_bgr)
-        self._start_latest_detector_track(frame_bgr, now)
-      else:
-        detection = self._classify_proposal_track(frame_bgr, now)
+      try:
+        if detector_due:
+          self.detector_inference_count += 1
+          self.last_inference_at = now
+          detection = self._detect_sign(frame_bgr)
+          self._start_latest_detector_track(frame_bgr, now)
+        else:
+          detection = self._classify_proposal_track(frame_bgr, now)
+      except Exception as exc:
+        cloudlog.error(f"speed_limit_vision inference error: {exc}")
+        detection = None
       self.last_frame_process_duration_s = time.monotonic() - inference_started_at
       if detection is not None:
         self.detection_count += 1

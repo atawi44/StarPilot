@@ -184,10 +184,15 @@ class StarPilotEvents:
       self.random_event_playing |= bool({event for event in self.events.names if RANDOM_EVENT_START <= event <= RANDOM_EVENT_END})
 
     if self.error_log.is_file():
-      if starpilot_toggles.random_events:
-        self.events.add(StarPilotEventName.openpilotCrashedRandomEvent)
-      else:
-        self.events.add(StarPilotEventName.openpilotCrashed)
+      if "openpilotCrashed" not in self.played_events:
+        if starpilot_toggles.random_events:
+          self.events.add(StarPilotEventName.openpilotCrashedRandomEvent)
+        else:
+          self.events.add(StarPilotEventName.openpilotCrashed)
+      try:
+        self.error_log.unlink()
+      except Exception:
+        pass
 
     if self.starpilot_planner.starpilot_vcruise.slc.limit_change_started and starpilot_toggles.speed_limit_changed_alert:
       self.events.add(StarPilotEventName.speedLimitChanged)

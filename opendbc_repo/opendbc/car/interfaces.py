@@ -275,7 +275,7 @@ class CarInterfaceBase(ABC):
           0x50C in fingerprint[0] or
           candidate in ALT_BUS_LDA_BUTTON_CARS or
           bool(CP.flags & HyundaiFlags.CAN_CANFD_BLENDED)
-        )
+        ) and candidate not in (HYUNDAI.HYUNDAI_AZERA_6TH_GEN, HYUNDAI.HYUNDAI_AZERA_HEV_6TH_GEN)
         if hyundai_has_lda_button:
           fp_ret.safetyConfigs[-1].safetyParam |= HyundaiStarPilotSafetyFlags.HAS_LDA_BUTTON.value
 

@@ -306,6 +306,8 @@ def get_nnff_substitutes():
   with open(TORQUE_SUBSTITUTE_PATH, "rb") as f:
     substitutes_data = tomllib.load(f)
     substitutes = {key: value for key, value in substitutes_data.items()}
+  substitutes.setdefault("HYUNDAI_AZERA_6TH_GEN", "HYUNDAI_SONATA_LF")
+  substitutes.setdefault("HYUNDAI_AZERA_HEV_6TH_GEN", "HYUNDAI_SONATA_LF")
   return substitutes
 
 def nnff_supported(car_fingerprint):

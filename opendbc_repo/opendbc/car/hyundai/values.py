@@ -267,8 +267,12 @@ class HyundaiNonSccPlatformConfig(PlatformConfig):
 class CAR(Platforms):
   # Hyundai
   HYUNDAI_AZERA_6TH_GEN = HyundaiPlatformConfig(
-    [HyundaiCarDocs("Hyundai Azera 2022", "All", car_parts=CarParts.common([CarHarness.hyundai_k]))],
-    CarSpecs(mass=1600, wheelbase=2.885, steerRatio=14.5),
+    [
+      HyundaiCarDocs("Hyundai Azera / Grandeur 2017-19", "All", car_parts=CarParts.common([CarHarness.hyundai_c])),
+      HyundaiCarDocs("Hyundai Azera 2020-22", "All", car_parts=CarParts.common([CarHarness.hyundai_k])),
+    ],
+    CarSpecs(mass=1650, wheelbase=2.885, steerRatio=16.5),
+    flags=HyundaiFlags.MANDO_RADAR,
   )
   HYUNDAI_AZERA_HEV_6TH_GEN = HyundaiPlatformConfig(
     [

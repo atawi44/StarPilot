@@ -123,6 +123,7 @@ OCR_SEARCH_CROP_VARIANTS = (
 OCR_SEARCH_UPSCALE = 3
 OCR_FALLBACK_MIN_CONFIDENCE = 0.55
 VALUE_TEMPLATE_ROIS = (
+  (0.20, 0.80, 0.12, 0.88),
   (0.35, 0.82, 0.15, 0.78),
   (0.45, 0.85, 0.18, 0.78),
   (0.40, 0.84, 0.18, 0.75),
@@ -174,8 +175,10 @@ SPEED_LIMIT_CLASSES = {
 }
 
 VALID_SPEED_LIMITS_MPH = set(range(5, 125, 5))
+VALID_SPEED_LIMITS_KPH = {10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140}
 MIN_PUBLISHABLE_SPEED_LIMIT_MPH = 5
 MAX_IMPERIAL_PUBLISHABLE_SPEED_LIMIT_MPH = 80
+MAX_METRIC_PUBLISHABLE_SPEED_LIMIT_KPH = 140
 LEGACY_MODEL_PATH = Path(__file__).resolve().parents[1] / "assets" / "vision_models" / "speed_limit_vision.onnx"
 US_DETECTOR_MODEL_PATH = Path(__file__).resolve().parents[1] / "assets" / "vision_models" / "speed_limit_us_detector.onnx"
 US_CLASSIFIER_MODEL_PATH = Path(__file__).resolve().parents[1] / "assets" / "vision_models" / "speed_limit_us_value_classifier.onnx"
@@ -498,6 +501,9 @@ class SpeedLimitVisionDaemon:
 
   def _speed_value_unit(self):
     return "km/h" if self.is_metric else "mph"
+
+  def _valid_speed_limits(self) -> set[int]:
+    return VALID_SPEED_LIMITS_KPH if getattr(self, "is_metric", False) else VALID_SPEED_LIMITS_MPH
 
   def _speed_value_to_ms(self, speed_value):
     conversion = CV.KPH_TO_MS if self.is_metric else CV.MPH_TO_MS
@@ -1117,7 +1123,8 @@ class SpeedLimitVisionDaemon:
     return templates
 
   def _build_speed_value_templates(self):
-    templates = {str(speed_limit): [] for speed_limit in VALID_SPEED_LIMITS_MPH}
+    all_speeds = sorted(VALID_SPEED_LIMITS_MPH | VALID_SPEED_LIMITS_KPH)
+    templates = {str(speed_limit): [] for speed_limit in all_speeds}
     fonts = [
       cv2.FONT_HERSHEY_SIMPLEX,
       cv2.FONT_HERSHEY_DUPLEX,
@@ -1128,8 +1135,10 @@ class SpeedLimitVisionDaemon:
     for speed_limit in templates:
       for font in fonts:
         for scale, thickness in ((1.2, 2), (1.4, 2), (1.6, 3), (1.8, 3), (2.0, 4)):
-          canvas = np.full((120, 100), 255, dtype=np.uint8)
           text_size, baseline = cv2.getTextSize(speed_limit, font, scale, thickness)
+          canvas_w = max(140, text_size[0] + 20)
+          canvas_h = max(120, text_size[1] + 20)
+          canvas = np.full((canvas_h, canvas_w), 255, dtype=np.uint8)
           x = max((canvas.shape[1] - text_size[0]) // 2, 0)
           y = max((canvas.shape[0] + text_size[1]) // 2 - baseline, text_size[1])
           cv2.putText(canvas, speed_limit, (x, y), font, scale, 0, thickness, cv2.LINE_AA)
@@ -1484,7 +1493,10 @@ class SpeedLimitVisionDaemon:
       return None
     if detection.speed_limit_mph < MIN_PUBLISHABLE_SPEED_LIMIT_MPH:
       return None
-    if not getattr(self, "is_metric", False) and detection.speed_limit_mph > MAX_IMPERIAL_PUBLISHABLE_SPEED_LIMIT_MPH:
+    if getattr(self, "is_metric", False):
+      if detection.speed_limit_mph > MAX_METRIC_PUBLISHABLE_SPEED_LIMIT_KPH:
+        return None
+    elif detection.speed_limit_mph > MAX_IMPERIAL_PUBLISHABLE_SPEED_LIMIT_MPH:
       return None
     return detection
 
@@ -1539,7 +1551,9 @@ class SpeedLimitVisionDaemon:
       return False
     if yellow_ratio > REGULATORY_MAX_YELLOW_RATIO and yellow_ratio > white_ratio * 0.45:
       return False
-    if red_ratio > REGULATORY_MAX_RED_RATIO and red_ratio > white_ratio * 0.35:
+    max_red_ratio = 0.45 if getattr(self, "is_metric", False) else REGULATORY_MAX_RED_RATIO
+    red_white_factor = 1.2 if getattr(self, "is_metric", False) else 0.35
+    if red_ratio > max_red_ratio and red_ratio > white_ratio * red_white_factor:
       return False
     if green_ratio > REGULATORY_MAX_GREEN_RATIO and green_ratio > white_ratio * 0.60:
       return False
@@ -2281,7 +2295,8 @@ class SpeedLimitVisionDaemon:
       return self._read_speed_limit_from_value_template(sign_crop)
 
     speed_limit_mph = int("".join(digits))
-    if speed_limit_mph not in VALID_SPEED_LIMITS_MPH:
+    valid_limits = self._valid_speed_limits()
+    if speed_limit_mph not in valid_limits:
       return self._read_speed_limit_from_value_template(sign_crop)
 
     return speed_limit_mph, float(sum(confidences) / len(confidences))
@@ -2293,7 +2308,11 @@ class SpeedLimitVisionDaemon:
 
     candidate = normalized > 0
     best_match = None
+    valid_limits = self._valid_speed_limits()
     for speed_limit, templates in self.speed_value_templates.items():
+      speed_val = int(speed_limit)
+      if speed_val not in valid_limits:
+        continue
       for template in templates:
         template_mask = template > 0
         union = np.logical_or(candidate, template_mask).sum()
@@ -2302,7 +2321,7 @@ class SpeedLimitVisionDaemon:
         intersection = np.logical_and(candidate, template_mask).sum()
         iou = intersection / union
         if best_match is None or iou > best_match[1]:
-          best_match = (int(speed_limit), iou)
+          best_match = (speed_val, iou)
 
     if best_match is None or best_match[1] < VALUE_TEMPLATE_MIN_CONFIDENCE:
       return None

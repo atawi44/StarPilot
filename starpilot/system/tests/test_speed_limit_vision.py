@@ -423,6 +423,37 @@ def test_metric_detection_allows_100():
   assert detection.speed_limit_mph == 100
 
 
+def test_metric_detection_allows_140_and_blocks_above():
+  daemon = SpeedLimitVisionDaemon.__new__(SpeedLimitVisionDaemon)
+  daemon.is_metric = True
+
+  detection_140 = daemon._publishable_detection(slv.Detection(140, 0.99))
+  assert detection_140 is not None
+  assert detection_140.speed_limit_mph == 140
+
+  detection_150 = daemon._publishable_detection(slv.Detection(150, 0.99))
+  assert detection_150 is None
+
+
+def test_valid_speed_limits_filters():
+  metric_daemon = SpeedLimitVisionDaemon.__new__(SpeedLimitVisionDaemon)
+  metric_daemon.is_metric = True
+  metric_limits = metric_daemon._valid_speed_limits()
+
+  assert 140 in metric_limits
+  assert 120 in metric_limits
+  assert 80 in metric_limits
+  assert 85 not in metric_limits
+  assert 75 not in metric_limits
+
+  imperial_daemon = SpeedLimitVisionDaemon.__new__(SpeedLimitVisionDaemon)
+  imperial_daemon.is_metric = False
+  imperial_limits = imperial_daemon._valid_speed_limits()
+
+  assert 85 in imperial_limits
+  assert 140 not in imperial_limits
+
+
 def test_detection_support_counts_independent_frames():
   daemon = publishing_daemon(False)
   daemon.followup_until = 0.0

@@ -1,5 +1,6 @@
 import pyray as rl
 from openpilot.system.ui.lib.application import FONT_SCALE, font_fallback
+from openpilot.system.ui.lib.arabic import is_arabic_text, format_arabic_text, get_arabic_font
 from openpilot.system.ui.lib.emoji import find_emoji
 
 _cache: dict[int, rl.Vector2] = {}
@@ -13,7 +14,13 @@ def draw_text_with_shadow(font: rl.Font, text: str, pos: rl.Vector2, font_size: 
 
 def measure_text_cached(font: rl.Font, text: str, font_size: int, spacing: float = 0) -> rl.Vector2:
   """Caches text measurements to avoid redundant calculations."""
-  font = font_fallback(font)
+  if is_arabic_text(text):
+    text = format_arabic_text(text)
+    arabic_font = get_arabic_font()
+    if arabic_font is not None:
+      font = arabic_font
+  else:
+    font = font_fallback(font)
   spacing = round(spacing, 4)
   key = hash((font.texture.id, text, font_size, spacing))
   if key in _cache:

@@ -20,6 +20,7 @@ from importlib.resources import as_file, files
 from openpilot.common.swaglog import cloudlog
 from openpilot.system.hardware import HARDWARE, PC
 from openpilot.system.ui.lib.multilang import multilang
+from openpilot.system.ui.lib.arabic import is_arabic_text, format_arabic_text, load_arabic_font, get_arabic_font
 from openpilot.common.realtime import Ratekeeper
 
 DEVICE_TYPE = HARDWARE.get_device_type()
@@ -1232,6 +1233,7 @@ class GuiApplication:
           rl.set_texture_filter(font.texture, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
         self._fonts[font_weight_file] = font
     rl.gui_set_font(self._fonts[FontWeight.NORMAL])
+    load_arabic_font()
 
   def _set_styles(self):
     rl.gui_set_style(rl.GuiControl.DEFAULT, rl.GuiControlProperty.BORDER_WIDTH, 0)
@@ -1246,7 +1248,13 @@ class GuiApplication:
       rl._orig_draw_text_ex = rl.draw_text_ex
 
     def _draw_text_ex_scaled(font, text, position, font_size, spacing, tint):
-      font = font_fallback(font)
+      if is_arabic_text(text):
+        text = format_arabic_text(text)
+        arabic_font = get_arabic_font()
+        if arabic_font is not None:
+          font = arabic_font
+      else:
+        font = font_fallback(font)
       return rl._orig_draw_text_ex(font, text, position, font_size * FONT_SCALE, spacing, tint)
 
     rl.draw_text_ex = _draw_text_ex_scaled

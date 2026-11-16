@@ -29,6 +29,7 @@ from openpilot.starpilot.common.favorite_slots import (
 
 from openpilot.system.ui.lib.application import MousePos, gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import draw_text_with_shadow, measure_text_cached
+from openpilot.system.ui.lib.arabic import is_arabic_text, format_arabic_text, get_arabic_font
 
 from cereal import log
 AlertSize = log.SelfdriveState.AlertSize
@@ -420,13 +421,19 @@ class StarPilotOnroadView(AugmentedRoadView):
     if not road_name:
       return
 
-    font = self._font_bold
+    if is_arabic_text(road_name):
+      display_road_name = format_arabic_text(road_name)
+      font = get_arabic_font() or self._font_bold
+    else:
+      display_road_name = road_name
+      font = self._font_bold
+
     font_size = 40
-    sz = measure_text_cached(font, road_name, font_size)
+    sz = measure_text_cached(font, display_road_name, font_size)
 
     cx = self._content_rect.x + self._content_rect.width / 2
     text_pos = rl.Vector2(
       round(cx - sz.x / 2),
       round(self._content_rect.y + self._content_rect.height - sz.y - 5),
     )
-    draw_text_with_shadow(font, road_name, text_pos, font_size, rl.WHITE)
+    draw_text_with_shadow(font, display_road_name, text_pos, font_size, rl.WHITE)

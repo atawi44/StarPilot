@@ -9,6 +9,11 @@ def get_rhd_override(params):
   return params.get_bool("IsRHD") if params.get_bool("IsRHDOverride") else None
 
 
+def get_disable_dm(params):
+  val = params.get("DisableDriverMonitoring")
+  return val != b"0"
+
+
 def dmonitoringd_thread():
   config_realtime_process([0, 1, 2, 3], 5)
 
@@ -26,6 +31,7 @@ def dmonitoringd_thread():
     rhd_saved=params.get_bool("IsRhdDetected"),
     always_on=params.get_bool("AlwaysOnDM"),
     rhd_override=get_rhd_override(params),
+    disable_dm=get_disable_dm(params),
   )
   demo_mode=False
 
@@ -52,6 +58,7 @@ def dmonitoringd_thread():
       DM.wheel_on_right_default = params.get_bool("IsRhdDetected")
       DM.wheel_on_right_override = get_rhd_override(params)
       demo_mode = params.get_bool("IsDriverViewEnabled")
+      DM.disable_dm = get_disable_dm(params)
 
     # save rhd virtual toggle every 5 mins
     if (DM.wheel_on_right_override is None and sm['driverStateV2'].frameId % 6000 == 0 and not demo_mode and

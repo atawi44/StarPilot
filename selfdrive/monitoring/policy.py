@@ -148,9 +148,10 @@ def face_orientation_from_model(orient_model, pos_model, rpy_calib):
 
 
 class DriverMonitoring:
-  def __init__(self, rhd_saved=False, settings=None, always_on=False, rhd_override=None):
+  def __init__(self, rhd_saved=False, settings=None, always_on=False, rhd_override=None, disable_dm=False):
     # init policy settings
     self.settings = settings if settings is not None else DRIVER_MONITOR_SETTINGS()
+    self.disable_dm = disable_dm
 
     # init driver status
     wheelpos_filter_raw_priors = (self.settings._WHEELPOS_DATA_AVG, self.settings._WHEELPOS_DATA_VAR, 2)
@@ -173,7 +174,7 @@ class DriverMonitoring:
     self.cnt_since_alert_3 = 0
     self.no_response_timeout = int(self.settings._NO_RESPONSE_TIMEOUT / DT_DMON)
     self.no_response_cnt = 0
-    self.lockout_active = Params().get_bool("DriverTooDistracted")
+    self.lockout_active = False if self.disable_dm else Params().get_bool("DriverTooDistracted")
     self.lockout_count = Params().get("DriverLockoutCount") or 0
     self.lockout_duration = self.settings._LOCKOUT_TIMES[min(max(self.lockout_count - 1, 0), len(self.settings._LOCKOUT_TIMES) - 1)]
     self.lockout_time_elapsed = 0
@@ -333,6 +334,18 @@ class DriverMonitoring:
   def _update_events(self, driver_engaged, op_engaged, lowspeed, wrong_gear):
     self.alert_level = AlertLevel.none
     self.driver_interacting = driver_engaged
+
+    if getattr(self, "disable_dm", False):
+      self.awareness = 1.0
+      self.last_vision_awareness = 1.0
+      self.last_wheeltouch_awareness = 1.0
+      self.driver_distracted = False
+      self.lockout_active = False
+      self.alert_3_cnt = 0
+      self.cnt_since_alert_3 = 0
+      self.no_response_cnt = 0
+      self.dcam_uncertain_cnt = 0
+      return
 
     if self.alert_3_cnt >= self.settings._MAX_ALERT_3 or self.no_response_cnt >= self.settings._MAX_NO_RESPONSE:
       if not self.lockout_active:

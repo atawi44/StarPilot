@@ -719,6 +719,24 @@ def test_genesis_g90_main_aol_can_start_before_set(monkeypatch, tmp_path):
   assert ret.alwaysOnLateralEnabled is True
 
 
+def test_hyundai_azera_main_aol_can_start_before_set(monkeypatch, tmp_path):
+  monkeypatch.setattr(spc, "Params", FakeParams)
+  monkeypatch.setattr(spc, "ERROR_LOGS_PATH", tmp_path)
+
+  for fingerprint in (spc.HYUNDAI_CAR.HYUNDAI_AZERA_6TH_GEN, spc.HYUNDAI_CAR.HYUNDAI_AZERA_HEV_6TH_GEN):
+    card = spc.StarPilotCard(
+      SimpleNamespace(brand="hyundai", carFingerprint=fingerprint),
+      SimpleNamespace(alternativeExperience=spc.ALTERNATIVE_EXPERIENCE.ALWAYS_ON_LATERAL),
+    )
+
+    ret = card.update(make_car_state(available=True), SimpleNamespace(distancePressed=False), make_sm(),
+                      make_toggles(always_on_lateral=True, always_on_lateral_main=True))
+
+    assert card.hyundai_aol_needs_engagement is False
+    assert ret.alwaysOnLateralAllowed is True
+    assert ret.alwaysOnLateralEnabled is True
+
+
 def test_other_legacy_hyundai_main_aol_still_waits_for_set(monkeypatch, tmp_path):
   monkeypatch.setattr(spc, "Params", FakeParams)
   monkeypatch.setattr(spc, "ERROR_LOGS_PATH", tmp_path)

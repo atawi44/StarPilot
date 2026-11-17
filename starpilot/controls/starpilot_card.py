@@ -68,7 +68,11 @@ class StarPilotCard:
       getattr(self.CP, "carFingerprint", None) in (HYUNDAI_CAR.KIA_FORTE_2019_NON_SCC, HYUNDAI_CAR.KIA_FORTE_2021_NON_SCC) and
       bool(hyundai_flags & HyundaiFlags.NON_SCC)
     )
-    hyundai_aol_before_engagement = self.kia_forte_non_scc or getattr(self.CP, "carFingerprint", None) == HYUNDAI_CAR.GENESIS_G90
+    hyundai_aol_before_engagement = self.kia_forte_non_scc or getattr(self.CP, "carFingerprint", None) in (
+      HYUNDAI_CAR.GENESIS_G90,
+      HYUNDAI_CAR.HYUNDAI_AZERA_6TH_GEN,
+      HYUNDAI_CAR.HYUNDAI_AZERA_HEV_6TH_GEN,
+    )
     self.hyundai_preserve_aol_across_reverse = getattr(self.CP, "carFingerprint", None) == HYUNDAI_CAR.HYUNDAI_SONATA_HYBRID
     self.hyundai_aol_needs_engagement = (
       self.CP.brand == "hyundai" and not (hyundai_flags & HyundaiFlags.CANFD) and not hyundai_aol_before_engagement
